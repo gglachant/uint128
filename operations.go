@@ -169,6 +169,109 @@ func Len(x Uint128) int {
 	return numHalfBits + bits.Len64(x.H)
 }
 
+// Mul multiplies x and y.
+// Overflow is not checked.
+func Mul(x, y Uint128) Uint128 {
+	// x = x1*2^64 + x0
+	// y = y1*2^64 + y0
+	// x*y = (x1*y1)*2^128 + (x1*y0)*2^64 + (x0*y1)*2^64 + x0*y0
+
+	// (x1*y1)*2^128 will overflow, so we ignore it.
+	// TODO: return overflow error?
+
+	h, l := bits.Mul64(x.L, y.L)
+	h += x.H*y.L + x.L*y.H
+
+	return Uint128{H: h, L: l}
+}
+
+// Div divides x by y.
+func Div(x, y Uint128) Uint128 {
+	return divMod(x, y, true)
+}
+
+// Mod returns x % y.
+func Mod(x, y Uint128) Uint128 {
+	return divMod(x, y, false)
+}
+
+// divMod implements 128-bit division and modulo.
+// This is a basic binary restoring division algorithm.
+func divMod(x, y Uint128, returnDiv bool) Uint128 {
+	if IsZero(y) {
+		panic("division by zero")
+	}
+	if IsZero(x) {
+		if returnDiv {
+			return Zero()
+		}
+		return Zero() // Mod(0, y) is 0
+	}
+
+	if Cmp(x, y) < 0 {
+		if returnDiv {
+			return Zero()
+		}
+		return x // Mod(x,y) is x if x < y
+	}
+	if Cmp(x, y) == 0 {
+		if returnDiv {
+			return Uint128{L: 1}
+		}
+		return Zero() // Mod(x,x) is 0
+	}
+
+	// At this point, x > y and y != 0
+	var quotient Uint128
+	remainder := Zero()
+	quotient = Zero()
+
+	for i := 0; i < numBits; i++ {
+		// Left shift remainder by 1
+		remainder = ShiftLeft(remainder, 1)
+		// Set the LSB of remainder with the current MSB of x
+		if (ShiftRight(x, uint(numBits-1-i))).L&1 == 1 {
+			remainder.L |= 1
+		}
+
+		// If remainder >= y
+		if Cmp(remainder, y) >= 0 {
+			remainder = Sub(remainder, y)
+			// Set the current bit of quotient to 1
+			quotient = Or(quotient, ShiftLeft(Uint128{L: 1}, uint(numBits-1-i)))
+		}
+	}
+
+	if returnDiv {
+		return quotient
+	}
+	return remainder
+}
+
+// RotateLeft rotates x left by k bits.
+func RotateLeft(x Uint128, k uint) Uint128 {
+	k %= numBits
+	if k == 0 {
+		return x
+	}
+	// result = (x << k) | (x >> (numBits - k))
+	shiftedLeft := ShiftLeft(x, k)
+	shiftedRight := ShiftRight(x, numBits-k)
+	return Or(shiftedLeft, shiftedRight)
+}
+
+// RotateRight rotates x right by k bits.
+func RotateRight(x Uint128, k uint) Uint128 {
+	k %= numBits
+	if k == 0 {
+		return x
+	}
+	// result = (x >> k) | (x << (numBits - k))
+	shiftedRight := ShiftRight(x, k)
+	shiftedLeft := ShiftLeft(x, numBits-k)
+	return Or(shiftedRight, shiftedLeft)
+}
+
 // LeadingZeros returns the number of leading zero bits in x; the result is 128 for x == 0.
 func LeadingZeros(x Uint128) int {
 	return numBits - Len(x)
