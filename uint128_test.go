@@ -49,7 +49,6 @@ func TestUint128Operations(t *testing.T) {
 	// NOTE: binary representation: fmt.Sprintf("%0b%064b", input.H, input.L)
 
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
 		t.Run(testCase.label, func(t *testing.T) {
 			t.Parallel()
 
@@ -61,22 +60,27 @@ func TestUint128Operations(t *testing.T) {
 			if rval != testCase.expectedLen {
 				t.Fatalf("Len - Expected:%d Got:%d", testCase.expectedLen, rval)
 			}
+
 			rval = uint128.LeadingZeros(testCase.input)
 			if rval != testCase.expectedLeadingZeros {
 				t.Fatalf("LeadingZeros - Expected:%d Got:%d", testCase.expectedLeadingZeros, rval)
 			}
+
 			rval = uint128.OnesCount(testCase.input)
 			if rval != testCase.expectedOnesCount {
 				t.Fatalf("OnesCount - Expected:%d Got:%d", testCase.expectedOnesCount, rval)
 			}
+
 			rval = uint128.TrailingZeros(testCase.input)
 			if rval != testCase.expectedTrailingZeros {
 				t.Fatalf("TrailingZeros - Expected:%d Got:%d", testCase.expectedTrailingZeros, rval)
 			}
+
 			ruint = uint128.Reverse(testCase.input)
 			if ruint != testCase.expectedReverse {
 				t.Fatalf("Reverse - Expected:%v Got:%v", testCase.expectedReverse, ruint)
 			}
+
 			ruint = uint128.ReverseBytes(testCase.input)
 			if ruint != testCase.expectedReverseBytes {
 				t.Fatalf("ReverseBytes - Expected:%v Got:%v", testCase.expectedReverseBytes, ruint)
@@ -121,7 +125,6 @@ func TestAdd128(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
 		t.Run(testCase.label, func(t *testing.T) {
 			t.Parallel()
 
@@ -168,7 +171,6 @@ func TestAdd(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
 		t.Run(testCase.label, func(t *testing.T) {
 			t.Parallel()
 
@@ -205,7 +207,6 @@ func TestIncr(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
 		t.Run(testCase.label, func(t *testing.T) {
 			t.Parallel()
 
@@ -224,9 +225,10 @@ func assert(t *testing.T, got, expected uint128.Uint128, message string) {
 	}
 }
 
-// assertFormat is a helper for TestFormat
-func assertFormat(t *testing.T, val uint128.Uint128, formatSpec string, expected string, testName string) {
+// assertFormat is a helper for TestFormat.
+func assertFormat(t *testing.T, val uint128.Uint128, formatSpec, expected, testName string) {
 	t.Helper()
+
 	got := fmt.Sprintf(formatSpec, val)
 	if got != expected {
 		t.Errorf("%s: for format %q of %#v, got %q, want %q",
@@ -238,7 +240,7 @@ func TestFormat(t *testing.T) {
 	t.Parallel()
 
 	valZero := uint128.Zero()
-	valABC := uint128.Uint128{L: 0xabc} // Decimal 2748
+	valABC := uint128.Uint128{L: 0xabc}                         // Decimal 2748
 	valMixed := uint128.Uint128{H: 0x12, L: 0xdef0000000000000} // H=18, L=16063007335082819584
 	valMax := uint128.MaxUint128()
 
@@ -263,7 +265,7 @@ func TestFormat(t *testing.T) {
 		{"Zero %X", valZero, "%X", "00000000000000000000000000000000"},
 		{"Zero %#X", valZero, "%#X", "0X00000000000000000000000000000000"},
 		{"Zero %b", valZero, "%b", binStr(valZero)},
-		{"Zero %#b", valZero, "%#b", "0b"+binStr(valZero)},
+		{"Zero %#b", valZero, "%#b", "0b" + binStr(valZero)},
 		{"Zero %d", valZero, "%d", "%!d(NOT_IMPLEMENTED)"},
 		{"Zero %o", valZero, "%o", "%!o(NOT_IMPLEMENTED)"},
 		{"Zero %T", valZero, "%T", "uint128.Uint128"},
@@ -278,14 +280,14 @@ func TestFormat(t *testing.T) {
 		{"ABC %X", valABC, "%X", "00000000000000000000000000000ABC"},
 		{"ABC %#X", valABC, "%#X", "0X00000000000000000000000000000ABC"},
 		{"ABC %b", valABC, "%b", binStr(valABC)},
-		{"ABC %#b", valABC, "%#b", "0b"+binStr(valABC)},
+		{"ABC %#b", valABC, "%#b", "0b" + binStr(valABC)},
 		{"ABC %d", valABC, "%d", "%!d(NOT_IMPLEMENTED)"},
 		{"ABC %o", valABC, "%o", "%!o(NOT_IMPLEMENTED)"},
 		{"ABC %T", valABC, "%T", "uint128.Uint128"},
 
 		// valMixed
 		{"Mixed %s", valMixed, "%s", "0x0000000000000012def0000000000000"},
-		{"Mixed %v", valMixed, "%v", "(H:18, L:16064339870830559232)"}, // Adjusted L to match Go's fmt output for 0xdef0000000000000
+		{"Mixed %v", valMixed, "%v", "(H:18, L:16064339870830559232)"},   // Adjusted L to match Go's fmt output for 0xdef0000000000000
 		{"Mixed %+v", valMixed, "%+v", "(H:18, L:16064339870830559232)"}, // Adjusted L to match Go's fmt output for 0xdef0000000000000
 		{"Mixed %#v", valMixed, "%#v", "0x0000000000000012def0000000000000"},
 		{"Mixed %x", valMixed, "%x", "0000000000000012def0000000000000"},
@@ -293,7 +295,7 @@ func TestFormat(t *testing.T) {
 		{"Mixed %X", valMixed, "%X", "0000000000000012DEF0000000000000"},
 		{"Mixed %#X", valMixed, "%#X", "0X0000000000000012DEF0000000000000"},
 		{"Mixed %b", valMixed, "%b", binStr(valMixed)},
-		{"Mixed %#b", valMixed, "%#b", "0b"+binStr(valMixed)},
+		{"Mixed %#b", valMixed, "%#b", "0b" + binStr(valMixed)},
 		{"Mixed %d", valMixed, "%d", "%!d(NOT_IMPLEMENTED)"},
 		{"Mixed %o", valMixed, "%o", "%!o(NOT_IMPLEMENTED)"},
 		{"Mixed %T", valMixed, "%T", "uint128.Uint128"},
@@ -308,14 +310,13 @@ func TestFormat(t *testing.T) {
 		{"Max %X", valMax, "%X", "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"},
 		{"Max %#X", valMax, "%#X", "0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"},
 		{"Max %b", valMax, "%b", binStr(valMax)},
-		{"Max %#b", valMax, "%#b", "0b"+binStr(valMax)},
+		{"Max %#b", valMax, "%#b", "0b" + binStr(valMax)},
 		{"Max %d", valMax, "%d", "%!d(NOT_IMPLEMENTED)"},
 		{"Max %o", valMax, "%o", "%!o(NOT_IMPLEMENTED)"},
 		{"Max %T", valMax, "%T", "uint128.Uint128"},
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			assertFormat(t, testCase.val, testCase.format, testCase.expected, testCase.name)
@@ -385,7 +386,7 @@ func TestDivMod(t *testing.T) {
 			label:       "Mod with remainder non-zero",
 			x:           uint128.Uint128{H: 1, L: 5}, // 1 * 2^64 + 5
 			y:           uint128.Uint128{L: 2},
-			expectedDiv: uint128.Uint128{H: 0, L: (1 << 63) + 2}, // (2^64 + 5) / 2 = 2^63 + 2
+			expectedDiv: uint128.Uint128{H: 0, L: (1 << 63) + 2}, // equivalent of (2^64 + 5) / 2 = 2^63 + 2
 			expectedMod: uint128.Uint128{L: 1},
 		},
 		{
@@ -398,7 +399,6 @@ func TestDivMod(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
 		t.Run(testCase.label, func(t *testing.T) {
 			t.Parallel()
 
@@ -410,6 +410,7 @@ func TestDivMod(t *testing.T) {
 							t.Errorf("Div did not panic as expected")
 						}
 					}()
+
 					_ = testCase.x.Div(testCase.y)
 				})
 				// Test Mod for panic
@@ -419,6 +420,7 @@ func TestDivMod(t *testing.T) {
 							t.Errorf("Mod did not panic as expected")
 						}
 					}()
+
 					_ = testCase.x.Mod(testCase.y)
 				})
 			} else {
@@ -485,7 +487,6 @@ func TestMul(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
 		t.Run(testCase.label, func(t *testing.T) {
 			t.Parallel()
 
@@ -495,6 +496,77 @@ func TestMul(t *testing.T) {
 	}
 }
 
+func TestMulWithOverflow(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		label    string
+		x, y     uint128.Uint128
+		expected uint128.Uint128
+		overflow bool
+	}{
+		{
+			label:    "0 * 0 = 0 (no overflow)",
+			x:        uint128.Zero(),
+			y:        uint128.Zero(),
+			expected: uint128.Zero(),
+			overflow: false,
+		},
+		{
+			label:    "1 * 0 = 0 (no overflow)",
+			x:        uint128.Uint128{H: 0, L: 1},
+			y:        uint128.Zero(),
+			expected: uint128.Zero(),
+			overflow: false,
+		},
+		{
+			label:    "math.MaxUint64 * 2 (no overflow)",
+			x:        uint128.Uint128{H: 0, L: math.MaxUint64},
+			y:        uint128.Uint128{H: 0, L: 2},
+			expected: uint128.Uint128{H: 1, L: math.MaxUint64 - 1},
+			overflow: false,
+		},
+		{
+			label:    "High part non-zero, no overflow",
+			x:        uint128.Uint128{H: 1, L: 0},
+			y:        uint128.Uint128{H: 0, L: 2},
+			expected: uint128.Uint128{H: 2, L: 0},
+			overflow: false,
+		},
+		{
+			label:    "Overflow: high-high multiplication",
+			x:        uint128.Uint128{H: 1, L: 0},
+			y:        uint128.Uint128{H: 1, L: 0},
+			expected: uint128.Uint128{H: 0, L: 0}, // lower 128 bits
+			overflow: true,
+		},
+		{
+			label: "Overflow: cross terms",
+			x:     uint128.Uint128{H: math.MaxUint64, L: math.MaxUint64},
+			y:     uint128.Uint128{H: 1, L: 1},
+			expected: func() uint128.Uint128 {
+				r, _ := uint128.Uint128{H: math.MaxUint64, L: math.MaxUint64}.MulWithOverflow(uint128.Uint128{H: 1, L: 1})
+
+				return r
+			}(),
+			overflow: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.label, func(t *testing.T) {
+			t.Parallel()
+
+			result, overflow := testCase.x.MulWithOverflow(testCase.y)
+			if result != testCase.expected {
+				t.Errorf("unexpected product: got %v, want %v", result, testCase.expected)
+			}
+
+			if overflow != testCase.overflow {
+				t.Errorf("unexpected overflow: got %v, want %v", overflow, testCase.overflow)
+			}
+		})
+	}
+}
 
 func TestRotate(t *testing.T) {
 	t.Parallel()
@@ -600,7 +672,6 @@ func TestRotate(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -615,13 +686,14 @@ func TestRotate(t *testing.T) {
 
 func TestCmp(t *testing.T) {
 	t.Parallel()
+
 	var (
-		zero = uint128.Zero()
-		one  = uint128.Uint128{L: 1}
-		two  = uint128.Uint128{L: 2}
-		maxL = uint128.Uint128{L: math.MaxUint64}
-		minH = uint128.Uint128{H: 1}
-		max  = uint128.MaxUint128()
+		zero   = uint128.Zero()
+		one    = uint128.Uint128{L: 1}
+		two    = uint128.Uint128{L: 2}
+		maxL   = uint128.Uint128{L: math.MaxUint64}
+		minH   = uint128.Uint128{H: 1}
+		max128 = uint128.MaxUint128()
 	)
 
 	testCases := []struct {
@@ -639,9 +711,9 @@ func TestCmp(t *testing.T) {
 		{"minH > maxL", minH, maxL, 1},
 		{"maxL == maxL", maxL, maxL, 0},
 		{"minH == minH", minH, minH, 0},
-		{"max == max", max, max, 0},
-		{"zero < max", zero, max, -1},
-		{"max > zero", max, zero, 1},
+		{"max128 == max128", max128, max128, 0},
+		{"zero < max128", zero, max128, -1},
+		{"max128 > zero", max128, zero, 1},
 		{"one < maxL", one, maxL, -1},
 		{"maxL > one", maxL, one, 1},
 		{"one < minH", one, minH, -1},
@@ -649,13 +721,14 @@ func TestCmp(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
+
 			got := testCase.x.Cmp(testCase.y)
 			if got != testCase.expected {
 				t.Errorf("error: %s Cmp(%v, %v) (got: %d, expected: %d)", testCase.name, testCase.x, testCase.y, got, testCase.expected)
 			}
+
 			gotPkg := uint128.Cmp(testCase.x, testCase.y)
 			if gotPkg != testCase.expected {
 				t.Errorf("error: %s uint128.Cmp(%v, %v) (got: %d, expected: %d)", testCase.name, testCase.x, testCase.y, gotPkg, testCase.expected)
@@ -666,12 +739,14 @@ func TestCmp(t *testing.T) {
 
 func TestIsZero(t *testing.T) {
 	t.Parallel()
+
 	var (
-		zero = uint128.Zero()
-		one  = uint128.Uint128{L: 1}
-		minH = uint128.Uint128{H: 1}
-		max  = uint128.MaxUint128()
+		zero   = uint128.Zero()
+		one    = uint128.Uint128{L: 1}
+		minH   = uint128.Uint128{H: 1}
+		max128 = uint128.MaxUint128()
 	)
+
 	testCases := []struct {
 		name     string
 		val      uint128.Uint128
@@ -680,16 +755,18 @@ func TestIsZero(t *testing.T) {
 		{"Zero is zero", zero, true},
 		{"One is not zero", one, false},
 		{"MinH is not zero", minH, false},
-		{"Max is not zero", max, false},
+		{"Max is not zero", max128, false},
 	}
+
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
+
 			got := testCase.val.IsZero()
 			if got != testCase.expected {
 				t.Errorf("error: %s IsZero() (got: %t, expected: %t)", testCase.name, got, testCase.expected)
 			}
+
 			gotPkg := uint128.IsZero(testCase.val)
 			if gotPkg != testCase.expected {
 				t.Errorf("error: %s uint128.IsZero() (got: %t, expected: %t)", testCase.name, gotPkg, testCase.expected)
@@ -698,14 +775,50 @@ func TestIsZero(t *testing.T) {
 	}
 }
 
+func expectedShiftLeft(val, zero uint128.Uint128, shift uint) uint128.Uint128 {
+	switch {
+	case shift == 0:
+		return val
+	case shift >= 128:
+		return zero
+	case shift >= 64:
+		return uint128.Uint128{H: val.L << (shift - 64), L: 0}
+	default:
+		return uint128.Uint128{
+			H: (val.H << shift) | (val.L >> (64 - shift)),
+			L: val.L << shift,
+		}
+	}
+}
+
+func expectedShiftRight(val, zero uint128.Uint128, shift uint) uint128.Uint128 {
+	switch {
+	case shift == 0:
+		return val
+	case shift >= 128:
+		return zero
+	case shift >= 64:
+		return uint128.Uint128{
+			L: val.H >> (shift - 64),
+			H: 0,
+		}
+	default:
+		return uint128.Uint128{
+			L: (val.L >> shift) | (val.H << (64 - shift)),
+			H: val.H >> shift,
+		}
+	}
+}
+
 func TestShift(t *testing.T) {
 	t.Parallel()
+
 	var (
-		u1L   = uint128.Uint128{L: 1}
-		u1H   = uint128.Uint128{H: 1}
-		uH1L1 = uint128.Uint128{H: 1, L: 1}
-		max   = uint128.MaxUint128()
-		zero  = uint128.Zero()
+		u1L    = uint128.Uint128{L: 1}
+		u1H    = uint128.Uint128{H: 1}
+		uH1L1  = uint128.Uint128{H: 1, L: 1}
+		max128 = uint128.MaxUint128()
+		zero   = uint128.Zero()
 	)
 
 	shifts := []uint{0, 1, 32, 63, 64, 65, 127, 128, 129}
@@ -717,48 +830,24 @@ func TestShift(t *testing.T) {
 		{"Shift 1L", u1L},
 		{"Shift 1H", u1H},
 		{"Shift H1L1", uH1L1},
-		{"Shift Max", max},
+		{"Shift Max", max128},
 		{"Shift Zero", zero},
 	}
 
 	for _, testCase := range testCases {
-		testCase := testCase // Capture range variable for parallel execution
-		for _, s := range shifts {
-			s := s // Capture range variable for parallel execution
-			t.Run(testCase.name+fmt.Sprintf(" by %d", s), func(t *testing.T) {
+		for _, shift := range shifts {
+			t.Run(testCase.name+fmt.Sprintf(" by %d", shift), func(t *testing.T) {
 				t.Parallel()
 
 				// ShiftLeft
-				var expectedL uint128.Uint128
-				if s == 0 {
-					expectedL = testCase.val
-				} else if s >= 128 {
-					expectedL = zero
-				} else if s >= 64 { // 64 <= s < 128
-					expectedL.H = testCase.val.L << (s - 64)
-					expectedL.L = 0
-				} else { // 0 < s < 64
-					expectedL.H = (testCase.val.H << s) | (testCase.val.L >> (64 - s))
-					expectedL.L = testCase.val.L << s
-				}
-				gotL := testCase.val.ShiftLeft(s)
-				assert(t, gotL, expectedL, fmt.Sprintf("ShiftLeft by %d", s))
+				expectedL := expectedShiftLeft(testCase.val, zero, shift)
+				gotL := testCase.val.ShiftLeft(shift)
+				assert(t, gotL, expectedL, fmt.Sprintf("ShiftLeft by %d", shift))
 
 				// ShiftRight
-				var expectedR uint128.Uint128
-				if s == 0 {
-					expectedR = testCase.val
-				} else if s >= 128 {
-					expectedR = zero
-				} else if s >= 64 { // 64 <= s < 128
-					expectedR.L = testCase.val.H >> (s - 64)
-					expectedR.H = 0
-				} else { // 0 < s < 64
-					expectedR.L = (testCase.val.L >> s) | (testCase.val.H << (64 - s))
-					expectedR.H = testCase.val.H >> s
-				}
-				gotR := testCase.val.ShiftRight(s)
-				assert(t, gotR, expectedR, fmt.Sprintf("ShiftRight by %d", s))
+				expectedR := expectedShiftRight(testCase.val, zero, shift)
+				gotR := testCase.val.ShiftRight(shift)
+				assert(t, gotR, expectedR, fmt.Sprintf("ShiftRight by %d", shift))
 			})
 		}
 	}
@@ -766,98 +855,212 @@ func TestShift(t *testing.T) {
 
 func TestLogicalOps(t *testing.T) {
 	t.Parallel()
+
 	var (
 		zero   = uint128.Zero()
 		val1   = uint128.Uint128{H: 0xF0F0F0F0F0F0F0F0, L: 0xABABABABABABABAB}
 		val2   = uint128.Uint128{H: 0x0F0F0F0F0F0F0F0F, L: 0xBABABABABABABABA}
-		max    = uint128.MaxUint128()
+		max128 = uint128.MaxUint128()
 	)
 
 	// Not
-	t.Run("Not Zero", func(t *testing.T) { assert(t, zero.Not(), max, "Not Zero") })
-	t.Run("Not Max", func(t *testing.T) { assert(t, max.Not(), zero, "Not Max") })
+	t.Run("Not Zero", func(t *testing.T) { t.Parallel(); assert(t, zero.Not(), max128, "Not Zero") })
+	t.Run("Not Max", func(t *testing.T) { t.Parallel(); assert(t, max128.Not(), zero, "Not Max") })
 	t.Run("Not val1", func(t *testing.T) {
+		t.Parallel()
+
 		expected := uint128.Uint128{H: ^val1.H, L: ^val1.L}
 		assert(t, val1.Not(), expected, "Not val1")
 	})
 
 	// And
 	t.Run("val1 And val2", func(t *testing.T) {
+		t.Parallel()
+
 		expected := uint128.Uint128{H: val1.H & val2.H, L: val1.L & val2.L}
+
 		assert(t, val1.And(val2), expected, "val1 And val2")
 	})
-	t.Run("val1 And zero", func(t *testing.T) { assert(t, val1.And(zero), zero, "val1 And zero") })
-	t.Run("val1 And max", func(t *testing.T) { assert(t, val1.And(max), val1, "val1 And max") })
+	t.Run("val1 And zero", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, val1.And(zero), zero, "val1 And zero")
+	})
+	t.Run("val1 And max", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, val1.And(max128), val1, "val1 And max")
+	})
 
 	// Or
 	t.Run("val1 Or val2", func(t *testing.T) {
+		t.Parallel()
+
 		expected := uint128.Uint128{H: val1.H | val2.H, L: val1.L | val2.L}
+
 		assert(t, val1.Or(val2), expected, "val1 Or val2")
 	})
-	t.Run("val1 Or zero", func(t *testing.T) { assert(t, val1.Or(zero), val1, "val1 Or zero") })
-	t.Run("zero Or val2", func(t *testing.T) { assert(t, zero.Or(val2), val2, "zero Or val2") })
-	t.Run("val1 Or max", func(t *testing.T) { assert(t, val1.Or(max), max, "val1 Or max") })
+	t.Run("val1 Or zero", func(t *testing.T) {
+		t.Parallel()
 
+		assert(t, val1.Or(zero), val1, "val1 Or zero")
+	})
+	t.Run("zero Or val2", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, zero.Or(val2), val2, "zero Or val2")
+	})
+	t.Run("val1 Or max", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, val1.Or(max128), max128, "val1 Or max")
+	})
 
 	// Xor
 	t.Run("val1 Xor val2", func(t *testing.T) {
+		t.Parallel()
+
 		expected := uint128.Uint128{H: val1.H ^ val2.H, L: val1.L ^ val2.L}
 		assert(t, val1.Xor(val2), expected, "val1 Xor val2")
 	})
-	t.Run("val1 Xor zero", func(t *testing.T) { assert(t, val1.Xor(zero), val1, "val1 Xor zero") })
-	t.Run("val1 Xor val1", func(t *testing.T) { assert(t, val1.Xor(val1), zero, "val1 Xor val1") })
+	t.Run("val1 Xor zero", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, val1.Xor(zero), val1, "val1 Xor zero")
+	})
+	t.Run("val1 Xor val1", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, val1.Xor(val1), zero, "val1 Xor val1")
+	})
 	t.Run("val1 Xor max", func(t *testing.T) {
-		expected := uint128.Uint128{H: val1.H ^ max.H, L: val1.L ^ max.L}
-		assert(t, val1.Xor(max), expected, "val1 Xor max")
+		t.Parallel()
+
+		expected := uint128.Uint128{H: val1.H ^ max128.H, L: val1.L ^ max128.L}
+		assert(t, val1.Xor(max128), expected, "val1 Xor max")
 	})
 
 	// AndNot
 	t.Run("val1 AndNot val2", func(t *testing.T) {
+		t.Parallel()
+
 		expected := uint128.Uint128{H: val1.H &^ val2.H, L: val1.L &^ val2.L}
 		assert(t, val1.AndNot(val2), expected, "val1 AndNot val2")
 	})
-	t.Run("val1 AndNot zero", func(t *testing.T) { assert(t, val1.AndNot(zero), val1, "val1 AndNot zero") })
-	t.Run("zero AndNot val1", func(t *testing.T) { assert(t, zero.AndNot(val1), zero, "zero AndNot val1") })
-	t.Run("val1 AndNot val1", func(t *testing.T) { assert(t, val1.AndNot(val1), zero, "val1 AndNot val1") })
+	t.Run("val1 AndNot zero", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, val1.AndNot(zero), val1, "val1 AndNot zero")
+	})
+	t.Run("zero AndNot val1", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, zero.AndNot(val1), zero, "zero AndNot val1")
+	})
+	t.Run("val1 AndNot val1", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, val1.AndNot(val1), zero, "val1 AndNot val1")
+	})
 	t.Run("max AndNot val1", func(t *testing.T) {
-		expected := uint128.Uint128{H: max.H &^ val1.H, L: max.L &^ val1.L}
-		assert(t, max.AndNot(val1), expected, "max AndNot val1")
+		t.Parallel()
+
+		expected := uint128.Uint128{H: max128.H &^ val1.H, L: max128.L &^ val1.L}
+		assert(t, max128.AndNot(val1), expected, "max AndNot val1")
 	})
 }
 
 func TestSubDecr(t *testing.T) {
 	t.Parallel()
+
 	var (
-		zero = uint128.Zero()
-		oneL = uint128.Uint128{L: 1}
-		twoL = uint128.Uint128{L: 2}
-		maxL = uint128.Uint128{L: math.MaxUint64}
-		oneH = uint128.Uint128{H: 1}
-		val1 = uint128.Uint128{H: 10, L: 20}
-		val2 = uint128.Uint128{H: 3, L: 5}
-		max  = uint128.MaxUint128()
+		zero   = uint128.Zero()
+		oneL   = uint128.Uint128{L: 1}
+		twoL   = uint128.Uint128{L: 2}
+		maxL   = uint128.Uint128{L: math.MaxUint64}
+		oneH   = uint128.Uint128{H: 1}
+		val1   = uint128.Uint128{H: 10, L: 20}
+		val2   = uint128.Uint128{H: 3, L: 5}
+		max128 = uint128.MaxUint128()
 	)
 
 	// Sub
-	t.Run("Sub zero from zero", func(t *testing.T) { assert(t, zero.Sub(zero), zero, "Sub zero from zero") })
-	t.Run("Sub one from one", func(t *testing.T) { assert(t, oneL.Sub(oneL), zero, "Sub one from one") })
-	t.Run("Sub one from two", func(t *testing.T) { assert(t, twoL.Sub(oneL), oneL, "Sub one from two") })
-	t.Run("Sub val2 from val1", func(t *testing.T) { assert(t, val1.Sub(val2), uint128.Uint128{H: 7, L: 15}, "Sub val2 from val1") })
-	t.Run("Sub one from zero (underflow)", func(t *testing.T) { assert(t, zero.Sub(oneL), max, "Sub one from zero") })
+	t.Run("Sub zero from zero", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, zero.Sub(zero), zero, "Sub zero from zero")
+	})
+	t.Run("Sub one from one", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, oneL.Sub(oneL), zero, "Sub one from one")
+	})
+	t.Run("Sub one from two", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, twoL.Sub(oneL), oneL, "Sub one from two")
+	})
+	t.Run("Sub val2 from val1", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, val1.Sub(val2), uint128.Uint128{H: 7, L: 15}, "Sub val2 from val1")
+	})
+	t.Run("Sub one from zero (underflow)", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, zero.Sub(oneL), max128, "Sub one from zero")
+	})
 	t.Run("Sub oneH from zero (underflow)", func(t *testing.T) {
+		t.Parallel()
+
 		expected := uint128.Uint128{H: math.MaxUint64, L: 0}
 		assert(t, zero.Sub(oneH), expected, "Sub oneH from zero")
 	})
-	t.Run("Sub maxL from oneH (borrow)", func(t *testing.T) { assert(t, oneH.Sub(maxL), uint128.Uint128{H: 0, L: 1}, "Sub maxL from oneH") })
-	t.Run("Sub oneL from oneH (borrow)", func(t *testing.T) { assert(t, oneH.Sub(oneL), uint128.Uint128{H: 0, L: math.MaxUint64}, "Sub oneL from oneH") })
-	t.Run("Sub max from max", func(t *testing.T) { assert(t, max.Sub(max), zero, "Sub max from max") })
-	t.Run("Sub zero from max", func(t *testing.T) { assert(t, max.Sub(zero), max, "Sub zero from max") })
+	t.Run("Sub maxL from oneH (borrow)", func(t *testing.T) {
+		t.Parallel()
 
+		assert(t, oneH.Sub(maxL), uint128.Uint128{H: 0, L: 1}, "Sub maxL from oneH")
+	})
+	t.Run("Sub oneL from oneH (borrow)", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, oneH.Sub(oneL), uint128.Uint128{H: 0, L: math.MaxUint64}, "Sub oneL from oneH")
+	})
+	t.Run("Sub max from max", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, max128.Sub(max128), zero, "Sub max from max")
+	})
+	t.Run("Sub zero from max", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, max128.Sub(zero), max128, "Sub zero from max")
+	})
 
 	// Decr
-	t.Run("Decr one", func(t *testing.T) { assert(t, oneL.Decr(), zero, "Decr one") })
-	t.Run("Decr zero", func(t *testing.T) { assert(t, zero.Decr(), max, "Decr zero") })
-	t.Run("Decr oneH", func(t *testing.T) { assert(t, oneH.Decr(), maxL, "Decr oneH") })
-	t.Run("Decr val1", func(t *testing.T) { assert(t, val1.Decr(), uint128.Uint128{H: 10, L: 19}, "Decr val1") })
-	t.Run("Decr max", func(t *testing.T) { assert(t, max.Decr(), uint128.Uint128{H:math.MaxUint64, L:math.MaxUint64-1}, "Decr val1") })
+	t.Run("Decr one", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, oneL.Decr(), zero, "Decr one")
+	})
+	t.Run("Decr zero", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, zero.Decr(), max128, "Decr zero")
+	})
+	t.Run("Decr oneH", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, oneH.Decr(), maxL, "Decr oneH")
+	})
+	t.Run("Decr val1", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, val1.Decr(), uint128.Uint128{H: 10, L: 19}, "Decr val1")
+	})
+	t.Run("Decr max", func(t *testing.T) {
+		t.Parallel()
+
+		assert(t, max128.Decr(), uint128.Uint128{H: math.MaxUint64, L: math.MaxUint64 - 1}, "Decr val1")
+	})
 }

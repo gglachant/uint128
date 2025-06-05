@@ -9,9 +9,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
+
+var ErrStringTooLong = errors.New("string length greater than 32")
 
 const (
 	numBits     = 128
@@ -117,6 +121,11 @@ func (x Uint128) Mul(y Uint128) Uint128 {
 	return Mul(x, y)
 }
 
+// MulWithOverflow multiplies x and y, returning the product and a boolean indicating if overflow occurred.
+func (x Uint128) MulWithOverflow(y Uint128) (Uint128, bool) {
+	return MulWithOverflow(x, y)
+}
+
 // Div divides x by y.
 func (x Uint128) Div(y Uint128) Uint128 {
 	return Div(x, y)
@@ -141,9 +150,9 @@ func (x Uint128) RotateRight(k uint) Uint128 {
 // XXX: Do a proper job of it.
 func NewFromString(str string) (x Uint128, err error) {
 	x = Uint128{0, 0}
-	// nolint: gomnd // Number of characters in a hexadecimal representation of an uint128
+	//nolint:mnd // Number of characters in a hexadecimal representation of an uint128.
 	if len(str) > 32 {
-		return x, fmt.Errorf("s:%s length greater than 32", str) // nolint: goerr113
+		return x, fmt.Errorf("s:%s: %w", str, ErrStringTooLong)
 	}
 
 	b, err := hex.DecodeString(fmt.Sprintf("%032s", str))
@@ -169,56 +178,84 @@ func (x Uint128) String() string {
 }
 
 // Format is a custom formatter for Uint128.
-func (x Uint128) Format(fmtState fmt.State, c rune) {
-	switch c {
+func (x Uint128) Format(fmtState fmt.State, verb rune) {
+	switch verb {
 	case 'v':
-		if fmtState.Flag('#') { // %#v
-			fmt.Fprint(fmtState, x.String())
-		} else if fmtState.Flag('+') { // %+v
-			// Format H and L as decimal strings individually first
-			hStr := fmt.Sprintf("%d", x.H)
-			lStr := fmt.Sprintf("%d", x.L)
-			fmt.Fprintf(fmtState, "(H:%s, L:%s)", hStr, lStr)
-		} else { // %v
-			// Format H and L as decimal strings individually first
-			hStr := fmt.Sprintf("%d", x.H)
-			lStr := fmt.Sprintf("%d", x.L)
-			fmt.Fprintf(fmtState, "(H:%s, L:%s)", hStr, lStr)
-		}
+		x.formatV(fmtState)
 	case 's':
-		fmt.Fprint(fmtState, x.String())
+		x.formatS(fmtState)
 	case 'b':
-		binStr := fmt.Sprintf("%064b%064b", x.H, x.L)
-		if fmtState.Flag('#') { // %#b
-			fmt.Fprint(fmtState, "0b"+binStr)
-		} else {
-			fmt.Fprint(fmtState, binStr)
-		}
+		x.formatB(fmtState)
 	case 'x':
-		hexStr := x.HexString()
-		if fmtState.Flag('#') { // %#x
-			fmt.Fprint(fmtState, "0x"+hexStr)
-		} else {
-			fmt.Fprint(fmtState, hexStr)
-		}
+		x.formatX(fmtState, false)
 	case 'X':
-		hexStr := strings.ToUpper(x.HexString())
-		if fmtState.Flag('#') { // %#X
-			fmt.Fprint(fmtState, "0X"+hexStr)
-		} else {
-			fmt.Fprint(fmtState, hexStr)
-		}
+		x.formatX(fmtState, true)
 	case 'd', 'o':
-		fmt.Fprintf(fmtState, "%%!%c(NOT_IMPLEMENTED)", c)
+		x.formatNotImplemented(fmtState, verb)
 	case 'T':
-		fmt.Fprintf(fmtState, "%T", x)
+		x.formatType(fmtState)
 	default:
-		// For unknown verbs, pass it to Sprintf but use default %v for the Uint128 part
-		// This is a bit tricky, might be better to just error or use a default.
-		// For now, let's try to be somewhat helpful.
-		// Constructing format string like "%" + string(c)
-		// fmt.Fprintf(fmtState, "%"+string(c), x.String()) // This might recurse or not be what user expects for all verbs
-		// Fallback to simple string for other verbs for now.
-		fmt.Fprintf(fmtState, "%%!%c(Uint128=%s)", c, x.String())
+		x.formatUnknown(fmtState, verb)
 	}
+}
+
+func (x Uint128) formatV(fmtState fmt.State) {
+	switch {
+	case fmtState.Flag('#'):
+		fmt.Fprint(fmtState, x.String())
+	case fmtState.Flag('+'):
+		fmt.Fprint(fmtState, x.formatHL())
+	default:
+		fmt.Fprint(fmtState, x.formatHL())
+	}
+}
+
+func (x Uint128) formatS(fmtState fmt.State) {
+	fmt.Fprint(fmtState, x.String())
+}
+
+func (x Uint128) formatB(fmtState fmt.State) {
+	binStr := fmt.Sprintf("%064b%064b", x.H, x.L)
+	if fmtState.Flag('#') {
+		fmt.Fprint(fmtState, "0b"+binStr)
+	} else {
+		fmt.Fprint(fmtState, binStr)
+	}
+}
+
+func (x Uint128) formatX(fmtState fmt.State, upper bool) {
+	hexStr := x.HexString()
+	if upper {
+		hexStr = strings.ToUpper(hexStr)
+	}
+
+	if fmtState.Flag('#') {
+		prefix := "0x"
+		if upper {
+			prefix = "0X"
+		}
+
+		fmt.Fprint(fmtState, prefix+hexStr)
+	} else {
+		fmt.Fprint(fmtState, hexStr)
+	}
+}
+
+func (x Uint128) formatNotImplemented(fmtState fmt.State, verb rune) {
+	fmt.Fprintf(fmtState, "%%!%c(NOT_IMPLEMENTED)", verb)
+}
+
+func (x Uint128) formatType(fmtState fmt.State) {
+	fmt.Fprintf(fmtState, "%T", x)
+}
+
+func (x Uint128) formatUnknown(fmtState fmt.State, verb rune) {
+	fmt.Fprintf(fmtState, "%%!%c(Uint128=%s)", verb, x.String())
+}
+
+func (x Uint128) formatHL() string {
+	hStr := strconv.FormatUint(x.H, 10)
+	lStr := strconv.FormatUint(x.L, 10)
+
+	return fmt.Sprintf("(H:%s, L:%s)", hStr, lStr)
 }

@@ -11,7 +11,7 @@ import "math/bits"
 //	 0 if x == y
 //	+1 if x >  y
 //
-// nolint: varnamelen
+//nolint:varnamelen // idiomatic parameter naming.
 func Cmp(x, y Uint128) int {
 	if x.H < y.H {
 		return -1
@@ -34,7 +34,8 @@ func IsZero(x Uint128) bool {
 }
 
 // ShiftLeft shifts x to the left by the provided number of bits.
-// nolint: varnamelen
+//
+//nolint:varnamelen // idiomatic parameter naming.
 func ShiftLeft(x Uint128, bits uint) Uint128 {
 	switch {
 	case bits >= numBits:
@@ -53,7 +54,8 @@ func ShiftLeft(x Uint128, bits uint) Uint128 {
 }
 
 // ShiftRight shifts x to the right by the provided number of bits.
-// nolint: varnamelen
+//
+//nolint:varnamelen // idiomatic parameter naming.
 func ShiftRight(x Uint128, bits uint) Uint128 {
 	switch {
 	case bits >= numBits:
@@ -134,7 +136,8 @@ func Incr(x Uint128) Uint128 {
 }
 
 // Sub subtracts x and y.
-// nolint: ifshort, varnamelen
+//
+//nolint:varnamelen // idiomatic parameter naming.
 func Sub(x, y Uint128) Uint128 {
 	pL := x.L
 	x.L -= y.L
@@ -148,7 +151,8 @@ func Sub(x, y Uint128) Uint128 {
 }
 
 // Decr decrements x by one.
-// nolint: ifshort, varnamelen
+//
+//nolint:varnamelen // idiomatic parameter naming.
 func Decr(x Uint128) Uint128 {
 	pL := x.L
 	x.L--
@@ -171,18 +175,45 @@ func Len(x Uint128) int {
 
 // Mul multiplies x and y.
 // Overflow is not checked.
+//
+//nolint:varnamelen // idiomatic parameter naming.
 func Mul(x, y Uint128) Uint128 {
 	// x = x1*2^64 + x0
 	// y = y1*2^64 + y0
 	// x*y = (x1*y1)*2^128 + (x1*y0)*2^64 + (x0*y1)*2^64 + x0*y0
-
 	// (x1*y1)*2^128 will overflow, so we ignore it.
-	// TODO: return overflow error?
-
 	h, l := bits.Mul64(x.L, y.L)
 	h += x.H*y.L + x.L*y.H
 
 	return Uint128{H: h, L: l}
+}
+
+// MulWithOverflow multiplies x and y, returning the product and a boolean indicating if overflow occurred.
+//
+//nolint:varnamelen // idiomatic parameter naming.
+func MulWithOverflow(x, y Uint128) (Uint128, bool) {
+	// x = x1*2^64 + x0
+	// y = y1*2^64 + y0
+	// x*y = (x1*y1)*2^128 + (x1*y0)*2^64 + (x0*y1)*2^64 + x0*y0
+	// If x1*y1 != 0, then overflow definitely occurred (bits above 128)
+	// Also, if the high 64 bits of the sum overflowed, that's overflow
+	x0, x1 := x.L, x.H
+	y0, y1 := y.L, y.H
+
+	// Compute the partial products
+	h, l := bits.Mul64(x0, y0)
+	m1 := x1 * y0
+	m2 := x0 * y1
+
+	// Add the cross terms to the high part
+	h, carry1 := bits.Add64(h, m1, 0)
+	h, carry2 := bits.Add64(h, m2, 0)
+
+	// If x1*y1 != 0, that's overflow
+	// If carry1 or carry2 overflowed, that's overflow
+	overflow := (x1 != 0 && y1 != 0) || carry1 != 0 || carry2 != 0
+
+	return Uint128{H: h, L: l}, overflow
 }
 
 // Div divides x by y.
@@ -197,78 +228,94 @@ func Mod(x, y Uint128) Uint128 {
 
 // divMod implements 128-bit division and modulo.
 // This is a basic binary restoring division algorithm.
+//
+//nolint:varnamelen // idiomatic parameter naming.
 func divMod(x, y Uint128, returnDiv bool) Uint128 {
-	if IsZero(y) {
+	switch {
+	case IsZero(y):
 		panic("division by zero")
-	}
-	if IsZero(x) {
+	case IsZero(x):
 		if returnDiv {
 			return Zero()
 		}
-		return Zero() // Mod(0, y) is 0
-	}
 
-	if Cmp(x, y) < 0 {
+		return Zero() // Mod(0, y) is 0
+	case Cmp(x, y) < 0:
 		if returnDiv {
 			return Zero()
 		}
+
 		return x // Mod(x,y) is x if x < y
-	}
-	if Cmp(x, y) == 0 {
+	case Cmp(x, y) == 0:
 		if returnDiv {
-			return Uint128{L: 1}
+			return Uint128{H: 0, L: 1}
 		}
+
 		return Zero() // Mod(x,x) is 0
 	}
 
 	// At this point, x > y and y != 0
-	var quotient Uint128
-	remainder := Zero()
-	quotient = Zero()
-
-	for i := 0; i < numBits; i++ {
-		// Left shift remainder by 1
-		remainder = ShiftLeft(remainder, 1)
-		// Set the LSB of remainder with the current MSB of x
-		if (ShiftRight(x, uint(numBits-1-i))).L&1 == 1 {
-			remainder.L |= 1
-		}
-
-		// If remainder >= y
-		if Cmp(remainder, y) >= 0 {
-			remainder = Sub(remainder, y)
-			// Set the current bit of quotient to 1
-			quotient = Or(quotient, ShiftLeft(Uint128{L: 1}, uint(numBits-1-i)))
-		}
-	}
+	quotient, remainder := divModMainLoop(x, y)
 
 	if returnDiv {
 		return quotient
 	}
+
 	return remainder
 }
 
+// divModMainLoop performs the main binary restoring division loop.
+//
+//nolint:varnamelen // idiomatic parameter naming.
+func divModMainLoop(x, y Uint128) (Uint128, Uint128) {
+	remainder := Zero()
+	quotient := Zero()
+
+	var i uint
+	for i = range numBits {
+		shift := numBits - 1 - i
+		remainder = ShiftLeft(remainder, 1)
+
+		if (ShiftRight(x, shift)).L&1 == 1 {
+			remainder.L |= 1
+		}
+
+		if Cmp(remainder, y) >= 0 {
+			remainder = Sub(remainder, y)
+			quotient = Or(quotient, ShiftLeft(Uint128{H: 0, L: 1}, shift))
+		}
+	}
+
+	return quotient, remainder
+}
+
 // RotateLeft rotates x left by k bits.
+//
+//nolint:varnamelen // idiomatic parameter naming.
 func RotateLeft(x Uint128, k uint) Uint128 {
 	k %= numBits
 	if k == 0 {
 		return x
 	}
-	// result = (x << k) | (x >> (numBits - k))
+	// result is (x << k) | (x >> (numBits - k))
 	shiftedLeft := ShiftLeft(x, k)
 	shiftedRight := ShiftRight(x, numBits-k)
+
 	return Or(shiftedLeft, shiftedRight)
 }
 
 // RotateRight rotates x right by k bits.
+//
+//nolint:varnamelen // idiomatic parameter naming.
 func RotateRight(x Uint128, k uint) Uint128 {
 	k %= numBits
 	if k == 0 {
 		return x
 	}
-	// result = (x >> k) | (x << (numBits - k))
+	// result is (x >> k) | (x << (numBits - k))
 	shiftedRight := ShiftRight(x, k)
 	shiftedLeft := ShiftLeft(x, numBits-k)
+
 	return Or(shiftedRight, shiftedLeft)
 }
 
