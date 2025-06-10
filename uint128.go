@@ -147,7 +147,6 @@ func (x Uint128) RotateRight(k uint) Uint128 {
 }
 
 // NewFromString creates a new Uint128 from its hexadecimal string representation.
-// XXX: Do a proper job of it.
 func NewFromString(str string) (x Uint128, err error) {
 	x = Uint128{0, 0}
 	//nolint:mnd // Number of characters in a hexadecimal representation of an uint128.
