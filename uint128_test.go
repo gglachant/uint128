@@ -11,6 +11,50 @@ import (
 	"github.com/weborama/uint128"
 )
 
+func TestNewFromString(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		input     string
+		expected  uint128.Uint128
+		expectErr bool
+	}{
+		// Exactly 32 hex chars
+		{"00000000000000000000000000000001", uint128.Uint128{H: 0, L: 1}, false},
+		// Exactly 32 invalid hex chars
+		{"0000000000000000000000000000000R", uint128.Uint128{}, true},
+		// Fewer than 32 hex chars, should pad
+		{"abc", uint128.Uint128{H: 0, L: 0xabc}, false},
+		// 32 chars, nonzero high
+		{"00000000000000010000000000000000", uint128.Uint128{H: 1, L: 0}, false},
+		// Too long
+		{"000000000000000000000000000000000", uint128.Uint128{}, true},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.input, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := uint128.NewFromString(testCase.input)
+			if testCase.expectErr {
+				if err == nil {
+					t.Errorf("expected error for input %q, got none", testCase.input)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error for input %q: %v", testCase.input, err)
+			}
+
+			if result != testCase.expected {
+				t.Errorf("input %q: got %v, want %v", testCase.input, result, testCase.expected)
+			}
+		})
+	}
+}
+
 func TestUint128Operations(t *testing.T) {
 	t.Parallel()
 
@@ -44,9 +88,16 @@ func TestUint128Operations(t *testing.T) {
 			uint128.Uint128{H: 0x1, L: 0x456},
 			uint128.Uint128{H: 0x1, L: 0x456},
 		},
+		{
+			"{H: 0x1, L: 0x0}",
+			uint128.Uint128{H: 0x1, L: 0x0},
+			65, 63, 1, 64,
+			uint128.Uint128{H: 0x0, L: 0x8000000000000000},
+			uint128.Uint128{H: 0x0, L: 0x100000000000000},
+			uint128.Uint128{H: 0x1, L: 0x1},
+			uint128.Uint128{H: 0x1, L: 0xFFFFFFFFFFFFFFFF},
+		},
 	}
-
-	// NOTE: binary representation: fmt.Sprintf("%0b%064b", input.H, input.L)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.label, func(t *testing.T) {
@@ -110,13 +161,13 @@ func TestAdd128(t *testing.T) {
 			sum:   uint128.Uint128{H: 0, L: 1},
 		},
 		{
-			label: "1+ maxuint64 sum should overflow from Low to High",
+			label: "1+maxuint64 sum should overflow from Low to High",
 			x:     uint128.Uint128{H: 0, L: 1},
 			y:     uint128.Uint128{H: 0, L: math.MaxUint64},
 			sum:   uint128.Uint128{H: 1, L: 0},
 		},
 		{
-			label:    "1+ maxuint128 sum should overflow",
+			label:    "1+maxuint128 sum should overflow",
 			x:        uint128.Uint128{H: 0, L: 1},
 			y:        uint128.MaxUint128(),
 			sum:      uint128.Uint128{H: 0, L: 0},
@@ -157,13 +208,13 @@ func TestAdd(t *testing.T) {
 			sum:   uint128.Uint128{H: 0, L: 1},
 		},
 		{
-			label: "1+ maxuint64 sum should overflow from Low to High",
+			label: "1+maxuint64 sum should overflow from Low to High",
 			x:     uint128.Uint128{H: 0, L: 1},
 			y:     uint128.Uint128{H: 0, L: math.MaxUint64},
 			sum:   uint128.Uint128{H: 1, L: 0},
 		},
 		{
-			label: "1+ maxuint128 sum should overflow",
+			label: "1+maxuint128 sum should overflow",
 			x:     uint128.Uint128{H: 0, L: 1},
 			y:     uint128.MaxUint128(),
 			sum:   uint128.Uint128{H: 0, L: 0},
@@ -190,17 +241,17 @@ func TestIncr(t *testing.T) {
 		incr  uint128.Uint128
 	}{
 		{
-			label: "zero+1 sum should result 1",
+			label: "zero++ sum should result 1",
 			x:     uint128.Zero(),
 			incr:  uint128.Uint128{H: 0, L: 1},
 		},
 		{
-			label: "maxuint64+1 sum should overflow from Low to High",
+			label: "maxuint64++ sum should overflow from Low to High",
 			x:     uint128.Uint128{H: 0, L: math.MaxUint64},
 			incr:  uint128.Uint128{H: 1, L: 0},
 		},
 		{
-			label: "maxuint128+1 sum should overflow",
+			label: "maxuint128++ sum should overflow",
 			x:     uint128.MaxUint128(),
 			incr:  uint128.Uint128{H: 0, L: 0},
 		},
@@ -226,7 +277,7 @@ func assert(t *testing.T, got, expected uint128.Uint128, message string) {
 }
 
 // assertFormat is a helper for TestFormat.
-func assertFormat(t *testing.T, val uint128.Uint128, formatSpec, expected, testName string) {
+func assertFormat(t *testing.T, val any, formatSpec, expected, testName string) {
 	t.Helper()
 
 	got := fmt.Sprintf(formatSpec, val)
@@ -251,10 +302,12 @@ func TestFormat(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		val      uint128.Uint128
+		val      any
 		format   string
 		expected string
 	}{
+		// Note: no testing of %p verb (pointer) as this is not deterministic.
+
 		// Zero value
 		{"Zero %s", valZero, "%s", "0x00000000000000000000000000000000"},
 		{"Zero %v", valZero, "%v", "(H:0, L:0)"},
@@ -268,7 +321,8 @@ func TestFormat(t *testing.T) {
 		{"Zero %#b", valZero, "%#b", "0b" + binStr(valZero)},
 		{"Zero %d", valZero, "%d", "%!d(NOT_IMPLEMENTED)"},
 		{"Zero %o", valZero, "%o", "%!o(NOT_IMPLEMENTED)"},
-		{"Zero %T", valZero, "%T", "uint128.Uint128"},
+		{"Zero %T", valZero, "%T", "uint128.Uint128"}, // Note that this is covered by the fmt package.
+		{"Zero %?", valZero, "%?", fmt.Sprintf("%%!?(Uint128=%s)", valZero.String())},
 
 		// valABC
 		{"ABC %s", valABC, "%s", "0x00000000000000000000000000000abc"},
@@ -283,12 +337,13 @@ func TestFormat(t *testing.T) {
 		{"ABC %#b", valABC, "%#b", "0b" + binStr(valABC)},
 		{"ABC %d", valABC, "%d", "%!d(NOT_IMPLEMENTED)"},
 		{"ABC %o", valABC, "%o", "%!o(NOT_IMPLEMENTED)"},
-		{"ABC %T", valABC, "%T", "uint128.Uint128"},
+		{"ABC %T", valABC, "%T", "uint128.Uint128"}, // Note that this is covered by the fmt package.
+		{"ABC %?", valABC, "%?", fmt.Sprintf("%%!?(Uint128=%s)", valABC.String())},
 
 		// valMixed
 		{"Mixed %s", valMixed, "%s", "0x0000000000000012def0000000000000"},
-		{"Mixed %v", valMixed, "%v", "(H:18, L:16064339870830559232)"},   // Adjusted L to match Go's fmt output for 0xdef0000000000000
-		{"Mixed %+v", valMixed, "%+v", "(H:18, L:16064339870830559232)"}, // Adjusted L to match Go's fmt output for 0xdef0000000000000
+		{"Mixed %v", valMixed, "%v", "(H:18, L:16064339870830559232)"},
+		{"Mixed %+v", valMixed, "%+v", "(H:18, L:16064339870830559232)"},
 		{"Mixed %#v", valMixed, "%#v", "0x0000000000000012def0000000000000"},
 		{"Mixed %x", valMixed, "%x", "0000000000000012def0000000000000"},
 		{"Mixed %#x", valMixed, "%#x", "0x0000000000000012def0000000000000"},
@@ -298,7 +353,8 @@ func TestFormat(t *testing.T) {
 		{"Mixed %#b", valMixed, "%#b", "0b" + binStr(valMixed)},
 		{"Mixed %d", valMixed, "%d", "%!d(NOT_IMPLEMENTED)"},
 		{"Mixed %o", valMixed, "%o", "%!o(NOT_IMPLEMENTED)"},
-		{"Mixed %T", valMixed, "%T", "uint128.Uint128"},
+		{"Mixed %T", valMixed, "%T", "uint128.Uint128"}, // Note that this is covered by the fmt package.
+		{"Mixed %?", valMixed, "%?", fmt.Sprintf("%%!?(Uint128=%s)", valMixed.String())},
 
 		// valMax
 		{"Max %s", valMax, "%s", "0xffffffffffffffffffffffffffffffff"},
@@ -313,7 +369,8 @@ func TestFormat(t *testing.T) {
 		{"Max %#b", valMax, "%#b", "0b" + binStr(valMax)},
 		{"Max %d", valMax, "%d", "%!d(NOT_IMPLEMENTED)"},
 		{"Max %o", valMax, "%o", "%!o(NOT_IMPLEMENTED)"},
-		{"Max %T", valMax, "%T", "uint128.Uint128"},
+		{"Max %T", valMax, "%T", "uint128.Uint128"}, // Note that this is covered by the fmt package.
+		{"Max %?", valMax, "%?", fmt.Sprintf("%%!?(Uint128=%s)", valMax.String())},
 	}
 
 	for _, testCase := range testCases {

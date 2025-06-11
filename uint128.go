@@ -191,8 +191,6 @@ func (x Uint128) Format(fmtState fmt.State, verb rune) {
 		x.formatX(fmtState, true)
 	case 'd', 'o':
 		x.formatNotImplemented(fmtState, verb)
-	case 'T':
-		x.formatType(fmtState)
 	default:
 		x.formatUnknown(fmtState, verb)
 	}
@@ -242,10 +240,6 @@ func (x Uint128) formatX(fmtState fmt.State, upper bool) {
 
 func (x Uint128) formatNotImplemented(fmtState fmt.State, verb rune) {
 	fmt.Fprintf(fmtState, "%%!%c(NOT_IMPLEMENTED)", verb)
-}
-
-func (x Uint128) formatType(fmtState fmt.State) {
-	fmt.Fprintf(fmtState, "%T", x)
 }
 
 func (x Uint128) formatUnknown(fmtState fmt.State, verb rune) {
